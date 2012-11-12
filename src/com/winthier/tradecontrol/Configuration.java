@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -40,12 +41,12 @@ public class Configuration {
         @SuppressWarnings("unchecked")
         public Configuration(TradeControlPlugin plugin) {
                 this.plugin = plugin;
-                try {
-                        // write default config to disk once
-                        File file = plugin.getDataFolder();
-                        if (!file.exists()) file.mkdir();
-                        file = new File(file, "config.yml");
-                        if (!file.exists()) {
+                // write default config to disk once
+		File file = plugin.getDataFolder();
+                if (!file.exists()) file.mkdir();
+                file = new File(file, "config.yml");
+                if (!file.exists()) {
+                        try {
                                 InputStream in = plugin.getResource("config.yml");
                                 OutputStream out = new FileOutputStream(file);
                                 while (true) {
@@ -55,18 +56,31 @@ public class Configuration {
                                 }
                                 out.close();
                                 in.close();
+                        } catch (IOException ex) {
+                                this.plugin.getLogger().severe("Failed to open stream to file. Cannot copy default configuration. Disabling myself.");
+                                this.plugin.getPluginLoader().disablePlugin(this.plugin);
+                                return;
                         }
-                        plugin.reloadConfig();
-                        for (Map.Entry<String, Object> entry : plugin.getConfig().getConfigurationSection("trades").getValues(false).entrySet()) {
-                                Map<String, Object> map = ((ConfigurationSection)entry.getValue()).getValues(false);
-                                TradePattern pattern = getTradePattern(map);
-                                trades.put(entry.getKey(), pattern);
+                }
+                plugin.reloadConfig();
+                for (Map.Entry<String, Object> entry : plugin.getConfig().getConfigurationSection("trades").getValues(false).entrySet()) {
+                        Map<String, Object> map = ((ConfigurationSection)entry.getValue()).getValues(false);
+                        TradePattern pattern;
+                        try {
+                                pattern = getTradePattern(map);
+                        } catch (Exception ex) {
+                                this.plugin.getLogger().severe(ex.getMessage());
+                                continue;
                         }
-                        for (Object o : (List<Object>)plugin.getConfig().getList("filters")) {
+                        trades.put(entry.getKey(), pattern);
+                }
+                for (Object o : (List<Object>)plugin.getConfig().getList("filters")) {
+                        try {
                                 filters.add(getTradeFilter((Map<String, Object>)o));
+                        } catch (Exception ex) {
+                                this.plugin.getLogger().severe(ex.getMessage());
+                                continue;
                         }
-                } catch (Exception e) {
-                        e.printStackTrace();
                 }
         }
 
@@ -116,9 +130,8 @@ public class Configuration {
         @SuppressWarnings("unchecked")
         public static ItemStack getItemStack(Map<String, Object> conf) throws Exception {
                 Material mat = Material.getMaterial(((String)conf.get("type")).toUpperCase());
-                if (mat == null) {
-                    System.out.println((String)conf.get("type")).toUpperCase() + " does not exist.");
-                    return null;
+                if (mat == null){ 
+                        throw new Exception("Material " + (String)conf.get("type") + " doesn't exist, skipping it.");
                 }
                 int amount = 1;
                 if (conf.get("amount") != null) {
