@@ -60,6 +60,9 @@ public class Configuration {
                         for (Map.Entry<String, Object> entry : plugin.getConfig().getConfigurationSection("trades").getValues(false).entrySet()) {
                                 Map<String, Object> map = ((ConfigurationSection)entry.getValue()).getValues(false);
                                 TradePattern pattern = getTradePattern(map);
+                                if (pattern == null) {
+                                    continue;;
+                                }
                                 trades.put(entry.getKey(), pattern);
                         }
                         for (Object o : (List<Object>)plugin.getConfig().getList("filters")) {
@@ -91,18 +94,30 @@ public class Configuration {
                 if (buy.size() > 2 || buy.size() < 1) throw new Exception("Expected 1 or 2 buy items");
                 ItemPattern buy1, buy2 = null, sell;
                 buy1 = getItemPattern((Map<String, Object>)buy.get(0));
+                if (buy1 == null) {
+                    return null;
+                }
                 if (buy.size() == 2) buy2 = getItemPattern((Map<String, Object>)buy.get(1));
+                if (buy2 == null) {
+                    return null;
+                }
                 Object o = map.get("sell");
                 Map sellMap = null;
                 if (o instanceof ConfigurationSection) sellMap = ((ConfigurationSection)o).getValues(false);
                 else if (o instanceof Map) sellMap = (Map<String, Object>)o;
                 sell = getItemPattern(sellMap);
+                if (sell == null) {
+                    return null;
+                }
                 return new DefaultTradePattern(buy1, buy2, sell);
         }
 
         @SuppressWarnings("unchecked")
         public static ItemPattern getItemPattern(Map<String, Object> map) throws Exception {
                 ItemStack stack = getItemStack(map);
+                if (stack == null) {
+                    return null;
+                }
                 int minAmount = 1;
                 int maxAmount = Integer.MAX_VALUE;
                 if (map.get("amount") != null) {
@@ -117,7 +132,7 @@ public class Configuration {
         public static ItemStack getItemStack(Map<String, Object> conf) throws Exception {
                 Material mat = Material.getMaterial(((String)conf.get("type")).toUpperCase());
                 if (mat == null) {
-                    System.out.println((String)conf.get("type")).toUpperCase() + " does not exist.");
+                    System.out.println((String)conf.get("type") + " does not exist.");
                     return null;
                 }
                 int amount = 1;
