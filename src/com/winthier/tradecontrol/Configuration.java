@@ -116,6 +116,10 @@ public class Configuration {
         @SuppressWarnings("unchecked")
         public static ItemStack getItemStack(Map<String, Object> conf) throws Exception {
                 Material mat = Material.getMaterial(((String)conf.get("type")).toUpperCase());
+                if (mat == null) {
+                    System.out.println((String)conf.get("type")).toUpperCase() + " does not exist.");
+                    return null;
+                }
                 int amount = 1;
                 if (conf.get("amount") != null) {
                         amount = (Integer)conf.get("amount");
@@ -124,6 +128,7 @@ public class Configuration {
                 if (conf.get("damage") != null) {
                         damage = (Integer)conf.get("damage");
                 }
+                
                 // System.out.println(mat + ":" + damage + " " + amount);
                 return new ItemStack(mat, amount, (short)damage);
         }
